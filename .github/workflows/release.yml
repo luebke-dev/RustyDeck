@@ -57,7 +57,7 @@ jobs:
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
           (cd dist && sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256")
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.arch }}
           path: |
@@ -100,7 +100,7 @@ jobs:
           cargo generate-rpm --output dist/
           (cd dist && for f in *.deb *.rpm; do sha256sum "$f" > "$f.sha256"; done)
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: packages-${{ matrix.arch }}
           path: |
@@ -113,7 +113,7 @@ jobs:
     needs: [binaries, packages]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
 
