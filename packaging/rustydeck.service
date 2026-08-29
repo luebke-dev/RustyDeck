@@ -1,0 +1,16 @@
+[Unit]
+Description=RustyDeck — Stream Deck service
+Documentation=https://github.com/luebke-dev/RustyDeck
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rustydeck run
+Restart=always
+RestartSec=2
+# So launched programs find the Wayland/X11 display, run
+# `systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP` once.
+
+[Install]
+WantedBy=graphical-session.target

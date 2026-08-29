@@ -1,0 +1,165 @@
+# RustyDeck configuration
+# File: ~/.config/rustydeck/config.yaml
+# Changes are picked up while the service runs — the file is watched.
+#
+# Key numbering (Stream Deck MK.2, 5x3), starting at the top left:
+#    0  1  2  3  4
+#    5  6  7  8  9
+#   10 11 12 13 14
+
+device:
+  # Only needed when several decks are attached (see `rustydeck devices`).
+  serial: null
+  brightness: 60
+
+# Applies to every key; can be overridden per page and per key.
+defaults:
+  background: "#14161c"
+  color: "#e6edf3"
+  # icon_color: "#7aa2f7"   # named icons only; defaults to `color`
+  font_size: 13
+  padding: 8
+  press_feedback: true
+  # font: /usr/share/fonts/liberation-sans-fonts/LiberationSans-Bold.ttf
+
+start_page: main
+
+pages:
+  main:
+    buttons:
+      0:
+        label: Editor
+        background: "#1f2a44"
+        # 7448 built-in icons, no installation needed.
+        # `rustydeck icons <text>` searches them by name.
+        icon: mdi:code-braces
+        action:
+          run: code
+
+      1:
+        label: Files
+        background: "#1f2a44"
+        icon: mdi:folder-home
+        action:
+          run: xdg-open ~
+
+      2:
+        label: Note
+        background: "#1f2a44"
+        # An image file works just as well; paths are relative to this file:
+        #   icon: icons/note.png
+        icon: mdi:note-edit
+        # A list instead of a string is started without a shell, so quoting
+        # and special characters need no thought.
+        action:
+          run: ["notify-send", "RustyDeck", "Hello from the Stream Deck"]
+
+      4:
+        label: "Media »"
+        background: "#2b2136"
+        icon: mdi:music-box-multiple
+        action:
+          page: media
+
+      5:
+        label: Quieter
+        background: "#1d2b26"
+        icon: mdi:volume-minus
+        action:
+          run: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+
+      6:
+        label: Louder
+        background: "#1d2b26"
+        icon: mdi:volume-plus
+        action:
+          run: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+
+      # A key can follow the state of the system: `state.run` is polled, and
+      # the first matching case decides how the key looks.
+      7:
+        label: Sound
+        icon: mdi:volume-high
+        background: "#1d2b26"
+        action:
+          run: wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+        state:
+          run: wpctl get-volume @DEFAULT_AUDIO_SINK@
+          interval: 2
+          cases:
+            - contains: "[MUTED]"
+              label: Muted
+              icon: mdi:volume-off
+              background: "#3a2224"
+              icon_color: "#f7768e"
+            # A case without a condition always matches and belongs last.
+            - {}
+
+      # Labels, icons and colours may be templates, so the state can be shown
+      # as text. `stdout` holds the output of `state.run`.
+      8:
+        icon: mdi:speaker
+        background: "#1d2b26"
+        font_size: 15
+        action:
+          run: wpctl set-volume @DEFAULT_AUDIO_SINK@ 50%
+        state:
+          run: wpctl get-volume @DEFAULT_AUDIO_SINK@
+          interval: 2
+          cases:
+            - contains: "[MUTED]"
+              label: "—"
+            # `wpctl` prints "Volume: 0.73"; the label turns that into "73%".
+            - label: "{{ ((stdout | replace('Volume: ', '') | float) * 100) | round | int }}%"
+
+      # Without `cases` the state simply feeds the template.
+      9:
+        label: "{{ stdout }}"
+        font_size: 20
+        color: "#7aa2f7"
+        state:
+          run: date +%H:%M
+          interval: 20
+
+      10:
+        label: Dimmer
+        icon: mdi:brightness-4
+        action:
+          brightness: "-10"
+
+      11:
+        label: Brighter
+        icon: mdi:brightness-7
+        action:
+          brightness: "+10"
+
+      14:
+        label: Reload
+        icon: mdi:reload
+        color: "#8b949e"
+        action: reload
+
+  media:
+    # Page-wide defaults override `defaults`.
+    background: "#241c2e"
+    buttons:
+      0:
+        icon: mdi:skip-previous
+        action:
+          run: playerctl previous
+
+      1:
+        icon: mdi:play-pause
+        action:
+          run: playerctl play-pause
+
+      2:
+        icon: mdi:skip-next
+        action:
+          run: playerctl next
+
+      14:
+        label: "Back"
+        icon: mdi:arrow-left
+        color: "#8b949e"
+        action: back

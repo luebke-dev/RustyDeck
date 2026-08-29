@@ -1,0 +1,10 @@
+# /etc/udev/rules.d/70-streamdeck.rules
+# Then: sudo udevadm control --reload-rules && sudo udevadm trigger
+# (unplug the deck once and plug it back in)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006d", TAG+="uaccess"  # Stream Deck Original V2
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0080", TAG+="uaccess"  # Stream Deck MK.2
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="00ba", TAG+="uaccess"  # Stream Deck MK.2 Scissor
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006c", TAG+="uaccess"  # Stream Deck XL
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="008f", TAG+="uaccess"  # Stream Deck XL V2
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0084", TAG+="uaccess"  # Stream Deck +
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="009a", TAG+="uaccess"  # Stream Deck Neo
