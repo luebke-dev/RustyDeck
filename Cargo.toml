@@ -39,6 +39,8 @@ copyright = "2026, luebke-dev"
 license-file = ["LICENSE", "0"]
 section = "utils"
 priority = "optional"
+# The binary is statically linked against musl, so it pulls in nothing.
+depends = ""
 extended-description = """\
 RustyDeck drives an Elgato Stream Deck from a YAML file. Keys are described \
 with icons, labels and colours, and can follow the state of the system. \
