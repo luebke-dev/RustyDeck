@@ -65,9 +65,16 @@ impl Renderer {
         if let Some(icon) = icon {
             let avail_h = (size as f32 - text_block).round().max(1.0) as u32;
             match icon {
-                IconRef::File(path) => self
-                    .draw_image(&mut canvas, path, avail_h, padding)
-                    .with_context(|| format!("could not load icon {}", path.display()))?,
+                IconRef::File(path) => {
+                    let image = image::open(path)
+                        .with_context(|| format!("could not load icon {}", path.display()))?;
+                    self.draw_image(&mut canvas, &image, avail_h, padding);
+                }
+                IconRef::Data(bytes) => {
+                    let image = image::load_from_memory(bytes)
+                        .context("the supplied image could not be decoded")?;
+                    self.draw_image(&mut canvas, &image, avail_h, padding);
+                }
                 IconRef::Glyph { glyph, name } => self
                     .draw_glyph(&mut canvas, *glyph, avail_h, padding, icon_fg)
                     .with_context(|| format!("could not draw icon `mdi:{name}`"))?,
@@ -180,11 +187,11 @@ impl Renderer {
     fn draw_image(
         &self,
         canvas: &mut RgbImage,
-        path: &Path,
+        image: &image::DynamicImage,
         avail_h: u32,
         padding: u32,
-    ) -> Result<()> {
-        let icon = image::open(path)?.to_rgba8();
+    ) {
+        let icon = image.to_rgba8();
         let box_w = self.size.saturating_sub(padding * 2).max(1);
         let box_h = avail_h.saturating_sub(padding * 2).max(1);
         let scaled = imageops::resize(
@@ -214,7 +221,6 @@ impl Renderer {
             }
             canvas.put_pixel(tx as u32, ty as u32, Rgb(out));
         }
-        Ok(())
     }
 }
 

@@ -23,6 +23,8 @@ pub const PREFIX: &str = "mdi:";
 #[derive(Debug, Clone)]
 pub enum IconRef {
     File(PathBuf),
+    /// An encoded image handed over directly, as the REST API does.
+    Data(std::sync::Arc<Vec<u8>>),
     /// A glyph from the icon font, with the name it was written as — the name
     /// is kept for error messages.
     Glyph {

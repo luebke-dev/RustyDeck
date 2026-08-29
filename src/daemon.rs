@@ -7,6 +7,7 @@ use crate::config::{Action, Brightness, Button, Config, StateCase, Style};
 use crate::device::{self, KeyEvent, StreamDeck};
 use crate::icons;
 use crate::render::Renderer;
+use crate::signals;
 use crate::state::{StatePoller, StateUpdate};
 use crate::template;
 use anyhow::{Context as _, Result};
@@ -14,30 +15,8 @@ use notify::{RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
-
-static SHUTDOWN: AtomicBool = AtomicBool::new(false);
-/// Set by SIGHUP: re-read the configuration and keep the service running.
-static RELOAD: AtomicBool = AtomicBool::new(false);
-
-extern "C" fn on_signal(sig: libc::c_int) {
-    if sig == libc::SIGHUP {
-        RELOAD.store(true, Ordering::SeqCst);
-    } else {
-        SHUTDOWN.store(true, Ordering::SeqCst);
-    }
-}
-
-fn install_signal_handlers() {
-    let handler = on_signal as *const () as libc::sighandler_t;
-    unsafe {
-        libc::signal(libc::SIGINT, handler);
-        libc::signal(libc::SIGTERM, handler);
-        libc::signal(libc::SIGHUP, handler);
-    }
-}
 
 /// What one key currently shows.
 struct KeyView {
@@ -67,14 +46,14 @@ impl PageView {
 }
 
 pub fn run(config_path: PathBuf) -> Result<()> {
-    install_signal_handlers();
+    signals::install();
 
     let mut config = Config::load(&config_path)?;
     let watcher = watch_config(&config_path);
     let reload_rx = watcher.as_ref().map(|(_, rx)| rx);
 
     loop {
-        if SHUTDOWN.load(Ordering::SeqCst) {
+        if signals::shutdown_requested() {
             return Ok(());
         }
 
@@ -86,7 +65,7 @@ pub fn run(config_path: PathBuf) -> Result<()> {
 
         // Device gone or an error: wait a moment, then try again.
         for _ in 0..20 {
-            if SHUTDOWN.load(Ordering::SeqCst) {
+            if signals::shutdown_requested() {
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(100));
@@ -134,14 +113,14 @@ fn serve(
     let mut last_reload = Instant::now();
 
     loop {
-        if SHUTDOWN.load(Ordering::SeqCst) {
+        if signals::shutdown_requested() {
             let _ = deck.reset();
             return Ok(Outcome::Shutdown);
         }
 
         // Collect configuration changes, debounced.
         {
-            let mut dirty = RELOAD.swap(false, Ordering::SeqCst);
+            let mut dirty = signals::take_reload_request();
             if let Some(rx) = reload_rx {
                 while rx.try_recv().is_ok() {
                     dirty = true;

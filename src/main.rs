@@ -12,6 +12,7 @@ USAGE:
   rustydeck check        Validate the configuration without touching the device
   rustydeck preview      Render pages as PNG (check the layout without hardware)
   rustydeck icons [TEXT] Search the built-in Material Design Icons by name
+  rustydeck api          Serve the keys over HTTP instead of a YAML file
   rustydeck install      Write and enable a systemd user unit
   rustydeck udev-rule    Print the udev rule for device access
 
@@ -20,6 +21,12 @@ OPTIONS:
   -p, --page <NAME>      Page for `preview` (default: every page)
   -o, --out <FILE>       Output file for `preview` (default: <page>.png)
   -v, --verbose          More log output
+
+API MODE (rustydeck api):
+  -l, --listen <ADDR>    Address to serve on (default: 127.0.0.1:8790)
+  -t, --token <TOKEN>    Require this token on every request
+  -s, --serial <SERIAL>  Pick one deck when several are attached
+  -b, --brightness <N>   Brightness in percent (default: 60)
   -h, --help             Show this help
 ";
 
@@ -31,6 +38,10 @@ fn main() -> Result<()> {
     let mut page: Option<String> = None;
     let mut needle = String::new();
     let mut out: Option<PathBuf> = None;
+    let mut listen = "127.0.0.1:8790".to_string();
+    let mut token: Option<String> = None;
+    let mut serial: Option<String> = None;
+    let mut brightness: u8 = 60;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -44,6 +55,16 @@ fn main() -> Result<()> {
             }
             "-v" | "--verbose" => verbose = true,
             "-p" | "--page" => page = Some(args.next().context("--page needs a name")?),
+            "-l" | "--listen" => listen = args.next().context("--listen needs an address")?,
+            "-t" | "--token" => token = Some(args.next().context("--token needs a value")?),
+            "-s" | "--serial" => serial = Some(args.next().context("--serial needs a value")?),
+            "-b" | "--brightness" => {
+                brightness = args
+                    .next()
+                    .context("--brightness needs a percentage")?
+                    .parse()
+                    .context("--brightness must be a number between 0 and 100")?;
+            }
             "-o" | "--out" => {
                 out = Some(config::expand_tilde(
                     &args.next().context("--out needs a path")?,
@@ -87,6 +108,12 @@ fn main() -> Result<()> {
         "check" => check_config(&config_path),
         "preview" => preview(&config_path, page.as_deref(), out.as_deref()),
         "icons" => list_icons(&needle),
+        "api" => rustydeck::api::run(rustydeck::api::Options {
+            listen,
+            token,
+            serial,
+            brightness,
+        }),
         "install" => install_unit(&config_path),
         "udev-rule" => {
             print!("{}", udev_rule());

@@ -1,9 +1,11 @@
 pub mod action;
+pub mod api;
 pub mod config;
 pub mod daemon;
 pub mod device;
 pub mod hidraw;
 pub mod icons;
 pub mod render;
+pub mod signals;
 pub mod state;
 pub mod template;

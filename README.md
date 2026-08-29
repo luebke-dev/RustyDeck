@@ -269,6 +269,61 @@ and leaves templated text empty.
 specific value wins. Colours as `#rgb`, `#rrggbb`, or a name (`red`, `blue`,
 `grey`, …).
 
+## API mode
+
+`rustydeck api` skips the YAML file entirely and serves the keys over HTTP, so
+another program owns the deck: it sets key images and learns about presses from
+an event stream. Nothing is run on the deck's behalf in this mode — what a press
+means is up to the client.
+
+```bash
+rustydeck api --listen 127.0.0.1:8790 --token secret
+```
+
+It listens on localhost by default. `--token` is optional but recommended as
+soon as the port is reachable from elsewhere; pass it as
+`Authorization: Bearer <token>` or, for event streams, as a `?token=` parameter.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/device` | Model, serial, firmware, key count and layout |
+| `GET /api/keys` | What every key currently shows |
+| `PUT /api/keys/{index}` | Set one key |
+| `PUT /api/keys` | Set several at once: `{"0": {...}, "3": {...}}` |
+| `DELETE /api/keys/{index}` | Clear one key |
+| `DELETE /api/keys` | Clear every key |
+| `GET /api/brightness`, `PUT /api/brightness` | Read or set it: `{"value": 60}` or `{"delta": -10}` |
+| `GET /api/events` | Key presses as server-sent events |
+
+A key is described by the same JSON in every direction:
+
+```bash
+curl -X PUT -H 'Authorization: Bearer secret' \
+     -d '{"label":"Build","icon":"mdi:hammer","background":"#1f2a44"}' \
+     http://127.0.0.1:8790/api/keys/0
+```
+
+`icon` takes a `mdi:` name or a path on the machine running the service;
+`image` takes a base64-encoded PNG, JPEG, GIF, BMP or WebP, which spares a
+remote client from needing files there. `label`, `background`, `color`,
+`icon_color`, `font_size` and `padding` work as in the YAML file.
+
+Presses arrive as an event stream:
+
+```bash
+curl -N -H 'Authorization: Bearer secret' http://127.0.0.1:8790/api/events
+
+event: key
+data: {"key":3,"action":"down"}
+
+event: key
+data: {"key":3,"action":"up"}
+```
+
+In the browser that is `new EventSource('http://host:8790/api/events?token=secret')`.
+Reading presses and writing images use separate device handles, so a slow
+client never delays the other, and every stream gets a thread of its own.
+
 ## Commands
 
 | Command | Purpose |
@@ -281,6 +336,7 @@ specific value wins. Colours as `#rgb`, `#rrggbb`, or a name (`red`, `blue`,
 | `rustydeck icons [TEXT]` | Search the built-in icons by name |
 | `rustydeck install` | Write a systemd user unit |
 | `rustydeck udev-rule` | Print the udev rule |
+| `rustydeck api` | Serve the keys over HTTP instead of a YAML file |
 
 `-c/--config` selects a different file, `-v` raises the log level.
 
@@ -309,6 +365,21 @@ Committing then checks file hygiene, `cargo fmt` and `cargo clippy`; pushing
 also runs the tests. `prek run --all-files` checks everything at once, which is
 what CI does as well. Plain `pre-commit` works with the same file if you prefer
 it.
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org)
+and a `commit-msg` hook enforces it:
+
+```
+feat: serve the keys over HTTP
+fix: use the portable ioctl request type so musl builds
+ci: track the current versions of the GitHub actions
+```
+
+Install that hook along with the others:
+
+```bash
+prek install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
+```
 
 ## Releases
 
