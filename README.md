@@ -294,6 +294,22 @@ specific value wins. Colours as `#rgb`, `#rrggbb`, or a name (`red`, `blue`,
 * Broken YAML leaves a running service untouched — the previous configuration
   stays active and the error goes to the log.
 
+## Contributing
+
+Git hooks are managed with [prek](https://github.com/j178/prek), a faster
+drop-in replacement for pre-commit that reads the same
+`.pre-commit-config.yaml`:
+
+```bash
+cargo install --locked prek
+prek install --hook-type pre-commit --hook-type pre-push
+```
+
+Committing then checks file hygiene, `cargo fmt` and `cargo clippy`; pushing
+also runs the tests. `prek run --all-files` checks everything at once, which is
+what CI does as well. Plain `pre-commit` works with the same file if you prefer
+it.
+
 ## Releases
 
 Versions follow the calendar: `YEAR.MONTH.MINOR`, for example `2026.8.0`, where
