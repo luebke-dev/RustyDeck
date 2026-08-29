@@ -9,8 +9,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-    name: Format, lints and tests
+  # The same hooks that guard a local commit: file hygiene, formatting and
+  # clippy. Running them here keeps a bypassed hook from slipping through.
+  hooks:
+    name: Git hooks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -21,11 +23,17 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Formatting
-        run: cargo fmt --all --check
+      - uses: j178/prek-action@v3
 
-      - name: Lints
-        run: cargo clippy --all-targets --all-features -- -D warnings
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Tests
         run: cargo test --all-features

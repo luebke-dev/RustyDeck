@@ -1,0 +1,54 @@
+# Git hooks, run by prek (https://github.com/j178/prek), a drop-in replacement
+# for pre-commit:
+#
+#   cargo install --locked prek
+#   prek install --hook-type pre-commit --hook-type pre-push
+#
+# `prek run --all-files` checks the whole tree, which is what CI does too.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+      - id: check-added-large-files
+        # The embedded icon font is 1.3 MB and belongs in the repository.
+        args: [--maxkb=1500]
+
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      # Compiling the tests takes long enough to be a nuisance on every
+      # commit, so they guard the push instead.
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test --all-features
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [pre-push]
+
+      # The example configuration ships inside the packages.
+      - id: example-config
+        name: validate the example configuration
+        entry: cargo run --quiet -- --config assets/example-config.yaml check
+        language: system
+        files: ^assets/example-config\.yaml$
+        pass_filenames: false
