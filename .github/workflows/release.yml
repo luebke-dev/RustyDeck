@@ -14,21 +14,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  binaries:
-    name: Static binary (${{ matrix.arch }})
+  artifacts:
+    name: Binary and packages (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
             target: x86_64-unknown-linux-musl
           - arch: aarch64
-            runner: ubuntu-22.04-arm
+            runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -38,90 +38,59 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      # Everything is pure Rust, so a static musl build needs no C libraries
-      # beyond the linker itself.
-      - name: Install the musl linker
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb,cargo-generate-rpm
 
+      # Everything is pure Rust, so musl links statically without any C
+      # toolchain. The packages carry that same binary, which keeps them free
+      # of a glibc floor.
       - name: Build
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }}
+          mkdir -p target/release
+          cp target/${{ matrix.target }}/release/rustydeck target/release/rustydeck
 
       - name: Package the tarball
         run: |
           version="${GITHUB_REF_NAME#v}"
           name="rustydeck-${version}-linux-${{ matrix.arch }}"
           mkdir -p "dist/${name}"
-          cp target/${{ matrix.target }}/release/rustydeck "dist/${name}/"
+          cp target/release/rustydeck "dist/${name}/"
           cp README.md LICENSE assets/MDI-LICENSE assets/example-config.yaml "dist/${name}/"
           cp -r packaging "dist/${name}/packaging"
           tar -C dist -czf "dist/${name}.tar.gz" "${name}"
-          (cd dist && sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256")
+          rm -rf "dist/${name}"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: binary-${{ matrix.arch }}
-          path: |
-            dist/*.tar.gz
-            dist/*.sha256
-
-  packages:
-    name: deb and rpm (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-22.04
-          - arch: aarch64
-            runner: ubuntu-22.04-arm
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: packages-${{ matrix.arch }}
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deb,cargo-generate-rpm
-
-      # Built against the runner's glibc (2.35), which the current Debian and
-      # Fedora releases satisfy.
-      - name: Build
-        run: cargo build --release --locked
-
-      - name: Build the packages
+      - name: Build the deb and rpm packages
         run: |
-          mkdir -p dist
           cargo deb --no-build --output dist/
           cargo generate-rpm --output dist/
-          (cd dist && for f in *.deb *.rpm; do sha256sum "$f" > "$f.sha256"; done)
+
+      - name: Checksums
+        run: |
+          cd dist
+          for f in *.tar.gz *.deb *.rpm; do sha256sum "$f" > "$f.sha256"; done
+          ls -l
 
       - uses: actions/upload-artifact@v4
         with:
-          name: packages-${{ matrix.arch }}
-          path: |
-            dist/*.deb
-            dist/*.rpm
-            dist/*.sha256
+          name: artifacts-${{ matrix.arch }}
+          path: dist/*
 
   release:
     name: Publish the release
-    needs: [binaries, packages]
+    needs: [artifacts]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: artifacts
 
       - name: Collect the files
         run: |
           mkdir -p dist
-          find artifacts -type f \( -name '*.tar.gz' -o -name '*.deb' -o -name '*.rpm' -o -name '*.sha256' \) \
-            -exec cp {} dist/ \;
+          find artifacts -type f -exec cp {} dist/ \;
           ls -l dist
 
       - uses: softprops/action-gh-release@v2

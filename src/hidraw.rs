@@ -77,10 +77,13 @@ pub struct HidDevice {
 }
 
 // _IOC(dir, type, nr, size) for HIDIOCSFEATURE/HIDIOCGFEATURE ('H', 0x06/0x07).
-fn hid_iowr(nr: u32, size: usize) -> libc::c_ulong {
+//
+// `libc::Ioctl` is the request type of `ioctl` — `c_ulong` on glibc but
+// `c_int` on musl, so it has to be spelled out rather than assumed.
+fn hid_iowr(nr: u32, size: usize) -> libc::Ioctl {
     const DIR_RW: u32 = 3; // _IOC_WRITE | _IOC_READ
     const MAGIC: u32 = b'H' as u32;
-    (((DIR_RW) << 30) | ((size as u32) << 16) | (MAGIC << 8) | nr) as libc::c_ulong
+    (((DIR_RW) << 30) | ((size as u32) << 16) | (MAGIC << 8) | nr) as libc::Ioctl
 }
 
 impl HidDevice {
