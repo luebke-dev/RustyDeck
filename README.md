@@ -28,13 +28,13 @@ and aarch64:
 
 ```bash
 # Fedora and friends
-sudo dnf install ./rustydeck-2026.8.0-1.x86_64.rpm
+sudo dnf install ./rustydeck-2026.8.1-1.x86_64.rpm
 
 # Debian and Ubuntu
-sudo apt install ./rustydeck_2026.8.0-1_amd64.deb
+sudo apt install ./rustydeck_2026.8.1-1_amd64.deb
 
 # Anywhere else: a statically linked binary, no dependencies
-tar xzf rustydeck-2026.8.0-linux-x86_64.tar.gz
+tar xzf rustydeck-2026.8.1-linux-x86_64.tar.gz
 ```
 
 The packages place the binary in `/usr/bin`, a systemd user unit in
@@ -383,8 +383,8 @@ prek install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 
 ## Releases
 
-Versions follow the calendar: `YEAR.MONTH.MINOR`, for example `2026.8.0`, where
-`MINOR` counts the releases within that month. Pushing a tag such as `v2026.8.0`
+Versions follow the calendar: `YEAR.MONTH.MINOR`, for example `2026.8.1`, where
+`MINOR` counts the releases within that month. Pushing a tag such as `v2026.8.1`
 makes the CI build the binaries and packages and publish them as a GitHub
 release.
 

@@ -2,7 +2,7 @@
 name = "rustydeck"
 # Calendar versioning: YEAR.MONTH.MINOR, where MINOR counts the releases
 # within that month.
-version = "2026.8.0"
+version = "2026.8.1"
 edition = "2024"
 rust-version = "1.88"
 description = "A Stream Deck service driven by a YAML file, with built-in Material Design Icons"
